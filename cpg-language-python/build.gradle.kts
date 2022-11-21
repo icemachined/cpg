@@ -50,4 +50,6 @@ tasks {
 dependencies {
     // jep for python support
     api(libs.jep)
+    implementation(libs.jline)
+    implementation(libs.kotlin.ki.shell)
 }

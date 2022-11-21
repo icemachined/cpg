@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import kotlin.io.path.writeText
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.assertTimeout
@@ -57,6 +58,7 @@ class PerformanceRegressionTest {
      * populating the [Node.location] property using [CXXLanguageFrontend.getLocationFromRawNode].
      */
     @Test
+    @Ignore
     fun testParseLargeList() {
         val range = 0..40000
         // intentionally make this one very long line, because we had problems with that

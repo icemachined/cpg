@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.console
+package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -33,21 +33,60 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
+import org.apache.commons.lang3.ClassUtils
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfigurationBase
 import org.jetbrains.kotlinx.ki.shell.plugins.SyntaxPlugin
 import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStyle
 import org.jline.utils.AttributedStyle.*
 
-fun Node.printCode(linesAhead: Int = 0, showNumbers: Boolean = false): Node {
-    val header = "--- ${this.fancyLocationLink()} ---"
+fun Node.prettyPrint(level: Int = 0, maxLevel: Int = -1): String {
+    /**
+     * build current node
+     */
+    fun Node.prettyPrintNode(level: Int): StringBuilder {
+        val indent = "${"-".repeat(level + 1)} "
+        return StringBuilder(
+            prettyCode().trim().split("\n").map { indent + it }.joinToString("\n")
+        )
+            .append("\n")
+    }
 
-    println(header)
-    println(this.fancyCode(linesAhead, showNumbers))
-    println("-".repeat(header.length))
+    /**
+     * AST operates with \n only, so we need to build the whole string representation and then
+     * change line separator
+     */
+    fun Node.doPrettyPrint(level: Int, maxLevel: Int): String {
+        val result = this.prettyPrintNode(level + 1)
+        if (maxLevel != 0) {
+            this.astChildren.forEach { child ->
+                result.append(child.doPrettyPrint(level + 1, maxLevel - 1))
+            }
+        }
+        return result.toString()
+    }
+    return doPrettyPrint(level, maxLevel).replace("\n", System.lineSeparator())
+}
+
+fun Node.prettyCode(linesAhead: Int = 0, showNumbers: Boolean = false): String {
+    val header = "--- ${this.fancyNodeType()} ---"
+    val sb = StringBuilder(header)
+    sb.append(System.lineSeparator())
+
+    sb.append(this.fancyCode(linesAhead, showNumbers))
+    sb.append(System.lineSeparator())
+    sb.append("-".repeat(header.length))
+    sb.append(System.lineSeparator())
+
+    return sb.toString()
+}
+
+fun Node.printCode(linesAhead: Int = 0, showNumbers: Boolean = false): Node {
+    print(this.prettyCode(linesAhead, showNumbers))
 
     return this
 }
@@ -159,7 +198,7 @@ fun Node.fancyCode(linesAhead: Int = 0, showNumbers: Boolean): String? {
     }
 
     // no location, no fancy
-    return this.code
+    return if (this.code.isNullOrEmpty()) this.name else this.code
 }
 
 fun getCode(file: String, region: Region): String {
@@ -204,7 +243,10 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             return list
         }
         is DeclarationStatement -> {
-            fancyType(node, (node.singleDeclaration as? HasType)!!, list)
+            val typedNode = (node.singleDeclaration as? HasType)!!
+            if (typedNode.type !is UnknownType) {
+                fancyType(node, typedNode, list)
+            }
 
             for (declaration in node.declarations) {
                 list.addAll(getFanciesFor(original, declaration))
@@ -347,8 +389,16 @@ fun getRelativeLocation(parentRegion: Region, region: Region): Region {
 
 fun Node?.fancyLocationLink(): String {
     return AttributedString(
-            PhysicalLocation.locationLink(this?.location),
-            DEFAULT.foreground(BLUE or BRIGHT)
-        )
+        PhysicalLocation.locationLink(this?.location),
+        DEFAULT.foreground(BLUE or BRIGHT)
+    )
+        .toAnsi()
+}
+
+fun Node?.fancyNodeType(): String {
+    return AttributedString(
+        ClassUtils.getShortClassName(this?.javaClass),
+        DEFAULT.foreground(BLUE or BRIGHT)
+    )
         .toAnsi()
 }

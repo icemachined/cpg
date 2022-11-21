@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.get
@@ -35,6 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -185,6 +188,47 @@ class PythonFrontendTest : BaseTest() {
 
         val r = compStmt.statements[2] as? ReturnStatement
         assertNotNull(r)
+    }
+
+    @Test
+    fun testPrettyPrint() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("function.py").toFile()),
+                topLevel,
+                true
+            ) { it.registerLanguage<PythonLanguage>() }
+
+        assertNotNull(tu)
+        println("EOG Forward walk")
+        tu.accept(
+            { x: Node? -> Strategy.EOG_FORWARD(x!!) },
+            object : IVisitor<Node>() {
+                override fun visit(n: Node) {
+                    println(n)
+                }
+            }
+        )
+        println("AST Forward walk")
+        tu.accept(
+            { x: Node? -> Strategy.AST_FORWARD(x!!) },
+            object : IVisitor<Node>() {
+                override fun visit(n: Node) {
+                    println(n)
+                }
+            }
+        )
+        println("DFG Forward walk")
+        tu.accept(
+            { x: Node? -> Strategy.DFG_FORWARD(x!!) },
+            object : IVisitor<Node>() {
+                override fun visit(n: Node) {
+                    println(n)
+                }
+            }
+        )
+        println(tu.prettyPrint())
     }
 
     @Test
