@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -201,34 +200,14 @@ class PythonFrontendTest : BaseTest() {
             ) { it.registerLanguage<PythonLanguage>() }
 
         assertNotNull(tu)
-        println("EOG Forward walk")
-        tu.accept(
-            { x: Node? -> Strategy.EOG_FORWARD(x!!) },
-            object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    println(n)
-                }
-            }
-        )
-        println("AST Forward walk")
-        tu.accept(
-            { x: Node? -> Strategy.AST_FORWARD(x!!) },
-            object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    println(n)
-                }
-            }
-        )
-        println("DFG Forward walk")
-        tu.accept(
-            { x: Node? -> Strategy.DFG_FORWARD(x!!) },
-            object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    println(n)
-                }
-            }
-        )
-        println(tu.prettyPrint())
+        println("*** EOG Forward walk ***")
+        println(tu.prettyPrint { x: Node? -> Strategy.EOG_FORWARD(x!!) })
+
+        println("*** DFG Forward walk ***")
+        println(tu.prettyPrint { x: Node? -> Strategy.DFG_FORWARD(x!!) })
+
+        println("*** AST Forward walk ***")
+        println(tu.prettyPrint { x: Node? -> Strategy.AST_FORWARD(x!!) })
     }
 
     @Test

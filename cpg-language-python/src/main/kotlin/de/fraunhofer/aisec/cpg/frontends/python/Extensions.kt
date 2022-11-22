@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.processing.IStrategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -44,10 +45,10 @@ import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStyle
 import org.jline.utils.AttributedStyle.*
 
-fun Node.prettyPrint(level: Int = 0, maxLevel: Int = -1): String {
+fun Node.prettyPrint(level: Int = 0, maxLevel: Int = -1, strategy: IStrategy<Node>): String {
     /** build current node */
     fun Node.prettyPrintNode(level: Int): StringBuilder {
-        val indent = "${"-".repeat(level + 1)} "
+        val indent = "${"-".repeat(level)} "
         return StringBuilder(prettyCode().trim().split("\n").map { indent + it }.joinToString("\n"))
             .append("\n")
     }
@@ -56,16 +57,16 @@ fun Node.prettyPrint(level: Int = 0, maxLevel: Int = -1): String {
      * AST operates with \n only, so we need to build the whole string representation and then
      * change line separator
      */
-    fun Node.doPrettyPrint(level: Int, maxLevel: Int): String {
+    fun Node.doPrettyPrint(level: Int, maxLevel: Int, strategy: IStrategy<Node>): String {
         val result = this.prettyPrintNode(level + 1)
         if (maxLevel != 0) {
-            this.astChildren.forEach { child ->
-                result.append(child.doPrettyPrint(level + 1, maxLevel - 1))
+            strategy.getIterator(this).forEach { child ->
+                result.append(child.doPrettyPrint(level + 1, maxLevel - 1, strategy))
             }
         }
         return result.toString()
     }
-    return doPrettyPrint(level, maxLevel).replace("\n", System.lineSeparator())
+    return doPrettyPrint(level, maxLevel, strategy).replace("\n", System.lineSeparator())
 }
 
 fun Node.prettyCode(linesAhead: Int = 0, showNumbers: Boolean = false): String {
